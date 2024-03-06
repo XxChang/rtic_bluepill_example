@@ -9,12 +9,14 @@ harness = false
 
 [dependencies]
 defmt = "0.3"
-defmt-rtt = "0.4"
+# defmt-rtt = "0.4"
 rtic = { version = "2.0.0", features = ["thumbv7-backend"] }
 panic-probe = { version = "0.3", features = ["print-defmt"] }
 stm32f1xx-hal = { version = "0.10.0", features = ["rt", "stm32f103"] }
 cortex-m = { version = "0.7", features = ["critical-section-single-core"] }
 rtic-monotonics ={ version = "1.0.0", features = ["cortex-m-systick"]}
+defmt-serial = "0.8.0"
+static_cell = "2.0.0"
 
 # cargo build/run
 [profile.dev]

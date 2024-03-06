@@ -6,10 +6,15 @@
 
 use panic_probe as _;
 use rtic::app;
+use stm32f1xx_hal::pac::USART1;
 use stm32f1xx_hal as _;
 use stm32f1xx_hal::prelude::*;
 // use rtic_m
-use defmt_rtt as _; // global logger
+// use defmt_rtt as _; // global logger
+use stm32f1xx_hal::serial::{Config, Serial};
+use static_cell::StaticCell;
+
+static SERIAL: StaticCell<stm32f1xx_hal::serial::Tx<USART1>> = StaticCell::new();
 
 #[defmt::panic_handler]
 fn panic() -> ! {
@@ -39,11 +44,30 @@ mod app {
         let systick_mono_token = rtic_monotonics::create_systick_token!();
         Systick::start(cx.core.SYST, 36_000_000, systick_mono_token);
 
-        defmt::info!("init!");
+        let clocks = rcc.cfgr.use_hse(8.MHz()).sysclk(36.MHz()).pclk1(36.MHz()).freeze(&mut flash.acr);
 
-        let _clocks = rcc.cfgr.use_hse(8.MHz()).sysclk(36.MHz()).pclk1(36.MHz()).freeze(&mut flash.acr);
+        let mut afio = cx.device.AFIO.constrain();
 
         let mut gpioc = cx.device.GPIOC.split();
+        let mut gpioa = cx.device.GPIOA.split();
+
+        let tx = gpioa.pa9.into_alternate_push_pull(&mut gpioa.crh);
+        let rx = gpioa.pa10;
+
+        let serial = Serial::new(
+            cx.device.USART1, 
+            (tx, rx), 
+            &mut afio.mapr, 
+            Config::default().baudrate(9600.bps()), 
+            &clocks,
+        );
+
+        let (tx, _rx) = serial.split();
+
+        defmt_serial::defmt_serial(SERIAL.init(tx));
+
+        defmt::info!("init!");
+
         let mut led = gpioc.pc13.into_push_pull_output(&mut gpioc.crh);
         led.set_high();
 
